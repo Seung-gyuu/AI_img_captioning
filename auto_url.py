@@ -54,15 +54,27 @@ def get_image_caption(image_url):
     except Exception as e:
         return f"Error loading page: {e}"
 
-
-with gr.Blocks(theme=gr.themes.Soft(),title="🖼️ Web Image Captioning") as app:
-    gr.Markdown("<div style='text-align:center; font-size: 36px;'>🌐 Web Page Image Captioning with BLIP</div>")
-    gr.Markdown("Enter a URL, and get AI-generated captions for images on that page.")
+with gr.Blocks(theme=gr.themes.Soft(), title="🖼️ Web Image Captioning") as app:
+    gr.Markdown(
+        "<div style='text-align:center; font-size: 36px; font-weight: bold;'>🌐 Web Page Image Captioning with BLIP</div>"
+    )
+    gr.Markdown(
+        "<div style='text-align:center;'>Enter a URL, and get AI-generated captions for images on that page.</div>"
+    )
 
     url_input = gr.Textbox(label="Enter URL", placeholder="https://en.wikipedia.org/wiki/IBM")
     submit_btn = gr.Button("🔍 Generate Captions")
 
-    gallery = gr.Gallery(label="Image Captions", show_label=False)
+    with gr.Row():
+        gallery = gr.Gallery(
+            label="Image Captions",
+            show_label=False,
+            columns=2, 
+            height=600,
+            object_fit="contain",
+        )
+
     submit_btn.click(fn=get_image_caption, inputs=url_input, outputs=gallery)
+
 
 app.launch(debug=True)
