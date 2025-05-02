@@ -2,12 +2,9 @@ import requests
 from PIL import Image
 from io import BytesIO
 from bs4 import BeautifulSoup
-from transformers import AutoProcessor, BlipForConditionalGeneration
-import gradio as gr
+from model_loader import processor, model, pipe
 
-processor = AutoProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
-
+img_list = []
 
 def get_image_caption(image_url):
     try:
@@ -37,32 +34,33 @@ def get_image_caption(image_url):
 
                 raw_image = raw_image.convert('RGB')
                 inputs = processor(raw_image, return_tensors="pt").to(model.device)
-                
-
                 out = model.generate(**inputs, max_new_tokens=50)
-
                 caption = processor.decode(out[0], skip_special_tokens=True)
-                res.append((raw_image, caption))
+        
+                vit_results = pipe(raw_image, top_k=3)
+                classification = {item['label']: item['score'] for item in vit_results}
+
+                
+                res.append((raw_image, caption, classification))
+                
                 if len(res) >= 5:  
                     break
             except Exception as e:
                 print(f"Error processing image {img_url}: {e}")
                 continue
+        if not res:
+            return "No suitable images found."
 
-        return res if res else "No suitable images found."
+        global img_list
+        img_list = res
+
+        return [item[0] for item in res]  
 
     except Exception as e:
         return f"Error loading page: {e}"
 
 
-with gr.Blocks(theme=gr.themes.Soft(),title="🖼️ Web Image Captioning") as app:
-    gr.Markdown("<div style='text-align:center; font-size: 36px;'>🌐 Web Page Image Captioning with BLIP</div>")
-    gr.Markdown("Enter a URL, and get AI-generated captions for images on that page.")
-
-    url_input = gr.Textbox(label="Enter URL", placeholder="https://en.wikipedia.org/wiki/IBM")
-    submit_btn = gr.Button("🔍 Generate Captions")
-
-    gallery = gr.Gallery(label="Image Captions", show_label=False)
-    submit_btn.click(fn=get_image_caption, inputs=url_input, outputs=gallery)
-
-app.launch(debug=True)
+def get_selected_image_info(index):
+    if 0 <= index < len(img_list):
+        return img_list[index]
+    return None
